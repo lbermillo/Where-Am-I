@@ -1,0 +1,259 @@
+<?xml version="1.0"?>
+<robot name="mini_r2" xmlns:xacro="http://ros.org/wiki/xacro">
+
+	<!-- Initialized macro variables -->
+	<xacro:property name="pi" value="3.1415"/>
+	<xacro:property name="width" value="0.06"/>
+	<xacro:property name="bodyLength" value="0.09"/>
+	<xacro:property name="baseLength" value="0.08"/>
+	<xacro:property name="legMass" value="20.0"/>
+	<xacro:property name="bodyMass" value="10.0"/>
+	<xacro:property name="wheelMass" value="5.0"/>
+	<xacro:property name="wheelDiam" value="0.025"/>
+
+
+
+	<!-- Color descriptions -->
+	<material name="blue">
+        <color rgba="0 0 0.8 1"/>
+    </material>
+
+	<material name="black">
+		<color rgba="0 0 0 1"/>
+	</material>
+
+	<material name="white">
+		<color rgba="1 1 1 1"/>
+	</material>
+
+	<material name="grey">
+		<color rgba="0.8 0.8 0.8 1"/>
+	</material>
+
+
+
+	<xacro:macro name="default_inertial" params="mass">
+    	<inertial>
+      		<mass value="${mass}" />
+      		<inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0" />
+    	</inertial>
+ 	</xacro:macro>
+
+
+	<xacro:include filename="$(find my_robot)/urdf/clean_project_robot.gazebo"/>
+
+
+
+	<link name="robot_footprint"></link>
+
+	<link name="base_link">
+		<pose>0 0 0.1 0 0 0</pose>
+
+		<visual>
+			<geometry>
+				<cylinder radius="${width}" length="${bodyLength}"/>
+			</geometry>
+			<material name="blue"/>
+		</visual>
+		<collision>
+			<geometry>
+				<cylinder radius="${width}" length="${bodyLength}"/>
+			</geometry>
+		</collision>
+		<xacro:default_inertial mass="${bodyMass}"/>
+	</link>
+
+	<joint name="base_footprint_joint" type="fixed">
+		<origin xyz="0 0 0" rpy="0 0 0"/>
+		<parent link="robot_footprint"/>
+		<child link="base_link"/>
+	</joint>
+
+
+
+	<xacro:macro name="wheel" params="prefix suffix reflect">
+		<link name="${prefix}_${suffix}_wheel">
+			<visual>
+				<origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+				<geometry>
+					<cylinder radius="${wheelDiam/2}" length="0.015"/>
+				</geometry>
+				<material name="black"/>
+			</visual>
+
+			<collision>
+				<origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+				<geometry>
+					<cylinder radius="${wheelDiam/2}" length="0.015"/>
+				</geometry>
+			</collision>
+
+			<xacro:default_inertial mass="${wheelMass}"/>
+		</link>	
+
+		<joint name="${prefix}_${suffix}_wheel_joint" type="continuous">
+			<origin xyz="${(baseLength*reflect)/3} 0 -0.005" rpy="0 0 0"/>
+			<parent link="${prefix}_leg_base"/>
+			<child link="${prefix}_${suffix}_wheel"/>
+			<axis xyz="0 1 0"/>
+		</joint>
+	</xacro:macro>
+
+
+
+	<xacro:macro name="leg" params="prefix reflect">
+
+		<link name="${prefix}_leg">
+			<visual>
+				<origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+				<geometry>
+					<box size="${width} ${bodyLength} 0.02"/>
+				</geometry>
+				<material name="white"/>
+			</visual>
+
+			<collision>
+				<origin xyz="0 0 0" rpy="${pi/2} 0 0"/>
+				<geometry>
+					<box size="${bodyLength} ${width} 0.02"/>
+				</geometry>
+			</collision>
+
+			<xacro:default_inertial mass="${legMass}"/>
+		</link>
+
+		<joint name="${prefix}_leg_joint" type="fixed">
+			<origin xyz="0 ${reflect * 0.061} -0.015" rpy="0 0 0"/>
+			<parent link="base_link"/>
+			<child link="${prefix}_leg"/>
+		</joint>
+
+
+		<link name="${prefix}_leg_base">
+			<visual>
+				<geometry>
+					<box size="${baseLength} 0.02 0.01"/>
+				</geometry>
+				<material name="white"/>
+			</visual>
+
+			<collision>
+				<geometry>
+					<box size="${baseLength} 0.02 0.01"/>
+				</geometry>
+			</collision>
+
+			<xacro:default_inertial mass="${legMass}"/>
+		</link>
+
+		<joint name="${prefix}_leg_base_joint" type="fixed">
+			<origin xyz="0 0 -0.04"/>
+			<parent link="${prefix}_leg"/>
+			<child link="${prefix}_leg_base"/>
+		</joint>
+		
+    	<xacro:wheel prefix="${prefix}" suffix="front" reflect="1"/>
+    	<xacro:wheel prefix="${prefix}" suffix="back" reflect="-1"/>
+
+	</xacro:macro>
+
+	<xacro:leg prefix="right" reflect="-1"/>
+	<xacro:leg prefix="left"  reflect="1"/>
+
+
+
+	
+	<link name="head">
+		<visual>
+			<geometry>
+				<sphere radius="${width}"/>
+			</geometry>
+			<material name="white"/>
+		</visual>
+
+		<collision>
+			<geometry>
+				<sphere radius="${width}"/>
+			</geometry>
+		</collision>
+
+		<xacro:default_inertial mass="5"/>
+	</link>
+
+	<joint name="head_body_joint" type="fixed">
+		<origin xyz="0 0 ${bodyLength/2}"/>
+		<parent link="base_link"/>
+		<child link="head"/>
+	</joint>
+
+	
+	
+	<link name="hokuyo">
+		<visual name="hokuyo_visual">
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<mesh filename="package://my_robot/meshes/hokuyo.dae"/>	
+			</geometry>
+		</visual>
+
+		<collision name="hokuyo_collision">
+			<origin xyz="0 0 0" rpy="0 0 0"/>
+			<geometry>
+				<box size="0.1 0.1 0.1"/>
+			</geometry>
+		</collision>
+
+		<inertial>
+            <mass value="0.1"/>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <inertia
+                    ixx="1e-6" ixy="0" ixz="0"
+                    iyy="1e-6" iyz="0"
+                    izz="1e-6"
+            />
+        </inertial>
+	</link>
+
+	<joint name="hokuyo_joint" type="fixed">
+		<origin xyz="0.03 0 0.05" rpy="0 0 0"/>
+		<parent link="head"/>
+		<child link="hokuyo"/>
+	</joint>
+
+
+
+	<link name="camera">
+		<visual name="camera_visual">
+			<origin xyz="0 0 0" rpy="1.57075 0 0"/>
+			<geometry>
+				<cylinder radius="0.006" length="0.006"/>
+			</geometry>
+			<material name="black"/>
+		</visual>
+
+		<collision name="camera_collision">
+			<origin xyz="0 0 0" rpy="1.57075 0 0"/>
+			<geometry>
+				<cylinder radius="0.006" length="0.006"/>
+			</geometry>
+		</collision>
+
+		<inertial>
+            <mass value="0.1"/>
+            <origin xyz="0 0 0" rpy="0 0 0"/>
+            <inertia
+                    ixx="1e-6" ixy="0" ixz="0"
+                    iyy="1e-6" iyz="0"
+                    izz="1e-6"
+            />
+        </inertial>
+	</link>
+
+	<joint name="camera_joint" type="fixed">
+		<origin xyz="0.03 0 -0.02" rpy="0 0 1.57075"/>
+		<parent link="hokuyo"/>
+		<child link="camera"/>
+	</joint>
+
+
+</robot>
